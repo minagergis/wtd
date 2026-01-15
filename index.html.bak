@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Comparison Tool - QA Testing Helper</title>
+    <meta name="description" content="Compare two Excel files and identify all differences for QA validation">
+
+    <!-- SheetJS Library for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-surface: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border: #475569;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .upload-box {
+            background: var(--bg-card);
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-box:hover::before {
+            opacity: 1;
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px var(--shadow);
+        }
+
+        .upload-box.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-box.uploaded {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.6;
+        }
+
+        .upload-box h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .upload-box p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-surface);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .file-info.visible {
+            display: block;
+        }
+
+        .config-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 1s ease-out;
+            display: none;
+        }
+
+        .config-section.visible {
+            display: block;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        select,
+        input {
+            padding: 0.75rem 1rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        select:focus,
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        select option {
+            background: var(--bg-surface);
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .results-section {
+            display: none;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .results-section.visible {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .stat-card.added {
+            border-left-color: var(--success);
+        }
+
+        .stat-card.removed {
+            border-left-color: var(--danger);
+        }
+
+        .stat-card.modified {
+            border-left-color: var(--warning);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .filters-toolbar {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-filter {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-filter:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-filter.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .export-group {
+            margin-left: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .search-box {
+            padding: 0.5rem 1rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            min-width: 250px;
+        }
+
+        /* Excel Grid Styles */
+        .excel-grid-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .grid-wrapper {
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+
+        .grid-wrapper.merged {
+            justify-content: center;
+        }
+
+        .sheet-panel {
+            flex: 1;
+            min-width: 500px;
+        }
+
+        .sheet-panel.merged {
+            max-width: 1000px;
+        }
+
+        .sheet-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-surface);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .excel-table th,
+        .excel-table td {
+            border: 1px solid #d0d0d0;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            position: relative;
+        }
+
+        .excel-table th {
+            background: #f0f0f0;
+            color: #333;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .excel-table th.row-header {
+            width: 50px;
+            background: #e8e8e8;
+        }
+
+        .excel-table td {
+            color: #000;
+            min-width: 100px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .excel-table td.row-header {
+            background: #f8f8f8;
+            color: #666;
+            font-weight: 600;
+            text-align: center;
+            width: 50px;
+        }
+
+        /* Cell change colors */
+        .cell-unchanged {
+            background: transparent;
+        }
+
+        .cell-changed {
+            background: #fff9c4 !important;
+            border-left: 3px solid #fbc02d;
+        }
+
+        .cell-added {
+            background: #c8e6c9 !important;
+            border-left: 3px solid #4caf50;
+        }
+
+        .cell-removed {
+            background: #ffcdd2 !important;
+            border-left: 3px solid #f44336;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        /* Tooltip */
+        .cell-tooltip {
+            position: absolute;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            box-shadow: 0 4px 12px var(--shadow);
+            min-width: 200px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .cell-tooltip.visible {
+            opacity: 1;
+        }
+
+        .excel-table td:hover .cell-tooltip {
+            opacity: 1;
+        }
+
+        .tooltip-row {
+            margin: 0.25rem 0;
+        }
+
+        .tooltip-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .tooltip-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .change-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-added {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-removed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .badge-modified {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .value-cell {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .value-diff {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .old-value {
+            text-decoration: line-through;
+            color: var(--danger);
+            opacity: 0.7;
+        }
+
+        .new-value {
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .progress-overlay.visible {
+            display: flex;
+        }
+
+        .progress-content {
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
+            border: 4px solid rgba(99, 102, 241, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .progress-text {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-detail {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .export-group {
+                margin-left: 0;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Excel Comparison Tool</h1>
+            <p class="subtitle">Professional QA Testing Helper - Compare Excel Files with Precision</p>
+        </header>
+
+        <!-- File Upload Section -->
+        <section class="upload-section">
+            <div class="upload-box" id="upload-box-1" data-file-num="1">
+                <div class="upload-icon">📁</div>
+                <h3>Original File</h3>
+                <p>Drag & drop your first Excel file here or click to browse</p>
+                <input type="file" id="file-1" accept=".xlsx,.xls" style="display: none;">
+                <div class="file-info" id="file-info-1"></div>
+            </div>
+
+            <div class="upload-box" id="upload-box-2" data-file-num="2">
+                <div class="upload-icon">📁</div>
+                <h3>New File</h3>
+                <p>Drag & drop your second Excel file here or click to browse</p>
+                <input type="file" id="file-2" accept=".xlsx,.xls" style="display: none;">
+                <div class="file-info" id="file-info-2"></div>
+            </div>
+        </section>
+
+        <!-- Configuration Section -->
+        <section class="config-section" id="config-section">
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">⚙️ Comparison Configuration</h2>
+
+            <div class="config-grid">
+                <div class="form-group">
+                    <label for="sheet-select-1">Sheet (Original File)</label>
+                    <select id="sheet-select-1">
+                        <option value="">Select a sheet...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sheet-select-2">Sheet (Compared File)</label>
+                    <select id="sheet-select-2">
+                        <option value="">Select a sheet...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="btn btn-primary" id="compare-btn" disabled>
+                    🔍 Compare Sheets
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="results-section">
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">📋 Comparison Results</h2>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Changes</div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card added">
+                    <div class="stat-label">Cells Added</div>
+                    <div class="stat-value" id="stat-added">0</div>
+                </div>
+                <div class="stat-card removed">
+                    <div class="stat-label">Cells Removed</div>
+                    <div class="stat-value" id="stat-removed">0</div>
+                </div>
+                <div class="stat-card modified">
+                    <div class="stat-label">Cells Modified</div>
+                    <div class="stat-value" id="stat-modified">0</div>
+                </div>
+            </div>
+
+            <!-- Export -->
+            <div class="filters-toolbar">
+                <div class="export-group" style="margin-left: 0;">
+                    <button class="btn btn-success" id="export-excel">📥 Export to Excel</button>
+                </div>
+            </div>
+
+            <!-- Excel-like Grid View -->
+            <div class="excel-grid-container" id="excel-grid-container">
+                <!-- Grid will be dynamically generated -->
+            </div>
+        </section>
+
+        <!-- Progress Overlay -->
+        <div class="progress-overlay" id="progress-overlay">
+            <div class="progress-content">
+                <div class="spinner"></div>
+                <div class="progress-text">Processing...</div>
+                <div class="progress-detail" id="progress-detail">Please wait</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

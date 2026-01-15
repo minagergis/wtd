@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Generate Test Files</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <h1>Generating Sample Excel Files...</h1>
+    <div id="status"></div>
+
+    <script>
+        // Sample data 1 (Original)
+        const data1 = [
+            ['ID', 'Name', 'Department', 'Salary', 'Status'],
+            [101, 'John Smith', 'Engineering', 75000, 'Active'],
+            [102, 'Jane Doe', 'Marketing', 65000, 'Active'],
+            [103, 'Bob Johnson', 'Sales', 55000, 'Active'],
+            [104, 'Alice Williams', 'Engineering', 80000, 'Active'],
+            [105, 'Charlie Brown', 'HR', 60000, 'Active']
+        ];
+
+        // Sample data 2 (New - with changes)
+        const data2 = [
+            ['ID', 'Name', 'Department', 'Salary', 'Status'],
+            [101, 'John Smith', 'Engineering', 78000, 'Active'],      // Salary changed
+            [102, 'Jane Doe', 'Sales', 65000, 'Active'],              // Department changed
+            // 103 removed
+            [104, 'Alice Williams', 'Engineering', 85000, 'Promoted'], // Salary and Status changed
+            [105, 'Charlie Brown', 'HR', 60000, 'Active'],
+            [106, 'David Miller', 'Finance', 70000, 'Active']          // New row added
+        ];
+
+        // Create workbook 1
+        const ws1 = XLSX.utils.aoa_to_sheet(data1);
+        const wb1 = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb1, ws1, 'Employees');
+        XLSX.writeFile(wb1, 'sample1.xlsx');
+
+        // Create workbook 2
+        const ws2 = XLSX.utils.aoa_to_sheet(data2);
+        const wb2 = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb2, ws2, 'Employees');
+        XLSX.writeFile(wb2, 'sample2.xlsx');
+
+        document.getElementById('status').innerHTML = `
+            <p style="color: green; font-weight: bold;">✓ Successfully created sample1.xlsx</p>
+            <p style="color: green; font-weight: bold;">✓ Successfully created sample2.xlsx</p>
+            <br>
+            <p><strong>Expected Changes:</strong></p>
+            <ul>
+                <li>Row 101 (John Smith): Salary changed from 75000 to 78000</li>
+                <li>Row 102 (Jane Doe): Department changed from Marketing to Sales</li>
+                <li>Row 103 (Bob Johnson): Removed</li>
+                <li>Row 104 (Alice Williams): Salary changed from 80000 to 85000, Status changed from Active to Promoted</li>
+                <li>Row 106 (David Miller): New row added</li>
+            </ul>
+            <br>
+            <p>You can now close this tab and use the Excel Comparison Tool!</p>
+        `;
+    </script>
+</body>
+
+</html>
