@@ -232,6 +232,6 @@ A: Cell-by-cell exact match. Very accurate.
 
 ## 🆘 Support
 
-For issues, questions, or feature requests, contact your QA team lead.
+For issues, questions, or feature requests, contact The Monz 😎👌🔥.
 
 **Happy Diffing! 🎉**
